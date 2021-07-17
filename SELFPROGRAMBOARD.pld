@@ -1,0 +1,139 @@
+Name     SelfProgramBoard ;
+PartNo   AtmelCPLD;
+Date     7/12/2021 ;
+Revision 01 ;
+Designer Nathaniel R Lewis ;
+Company  HooDooNet ;
+Assembly  None ;
+Location  Willits ;
+Device   f1504plcc44 ;
+
+PROPERTY ATEML {JTAG=OFF};
+PROPERTY ATMEL {preassign keep};
+PROPERTY ATMEL {security on};
+PROPERTY ATMEL {pin_keep OFF} ; /* Disables pin-keeper circuits */
+
+/* **** Bus Interface **** */
+
+Pin [4..9, 11, 12] = [D7..0];
+Pin [13..14] = [CODE_CS, CODE_RD];
+Pin [16, 36..41] = [A0, A10..15];
+Pin [44, 43] = [RD, WR];
+
+/* **** Peripherals **** */
+
+Pin [17..21] = [MA0..4];
+Pin [24..25] = [MEM_RD, MEM_WR];
+
+Pin 28 = INT;
+Pin 29 = SPI_CLK;
+Pin 31 = SPI_OUT;
+Pin 32 = SPI_IN;
+
+/* **** Global Signals **** */
+ 
+Pin 2 = CLK;
+Pin 1 = RST;
+
+/* **** Address Decoding **** */
+
+Field Address = [A15..0];
+PinNode = [Configure_Register, SPI_Data_Register, SPI_Control_Register];
+
+Configure_Register = Address:'h'[8000..83FF];
+SPI_Data_Register = Address:'b'100001XXXXXXXXX0;
+SPI_Control_Register = Address:'b'100001XXXXXXXXX1;
+
+/* **** Configure Register **** */
+
+PinNode = [Offboard_Select, Delay1];
+Offboard_Select.L = D5.io;
+Offboard_Select.LE = !WR & Configure_Register;
+Offboard_Select.AR = !RST;
+
+/* Give 2 code reads before switching to SPM memory */
+Delay1.D = Offboard_Select;
+Delay1.CK = CODE_RD;
+Delay1.AR = !RST;
+
+CODE_CS.D = Delay1;
+CODE_CS.CK = CODE_RD;
+CODE_CS.AR = !RST;
+
+PinNode = [WA0..4];
+[WA0..4].L = [D0..4].io;
+[WA0..4].LE = !WR & Configure_Register;
+[WA0..4].AR = !RST;
+
+/* **** SPM memory logic **** */
+
+!MEM_RD = (A15 & A14 & !RD) # (CODE_CS & !CODE_RD);
+!MEM_WR = (A15 & A14 & !WR);
+
+[MA0..4] = (!CODE_CS # CODE_RD) & [WA0..4];
+
+/* **** SPI counter register **** */
+PinNode = SPI_Running;
+PinNode = SPI_Last_Edge;
+PinNode = [SPI_Data_Load, SPI_Control_Load];
+
+SPI_Data_Load = !WR & SPI_Data_Register;
+SPI_Control_Load = !WR & SPI_Control_Register;
+
+PinNode = [CNT0..3];
+[CNT0..3].CK = CLK;
+[CNT0..3].AR = !RST;
+
+CNT0.T = (SPI_Running & !SPI_Data_Load);
+CNT1.T = (SPI_Running & !SPI_Data_Load) & CNT0;
+CNT2.T = (SPI_Running & !SPI_Data_Load) & [CNT0..1]:&;
+CNT3.T = (SPI_Running & !SPI_Data_Load) & [CNT0..2]:&;
+
+SPI_CLK = CNT0;
+SPI_Last_Edge = (SPI_Running & !SPI_Data_Load) & [CNT0..3]:&;
+
+/* **** SPI Data Register **** */
+
+SPI_Running.AP = SPI_Data_Load;
+SPI_Running.AR = !RST;
+SPI_Running.CK = CLK;
+SPI_Running.CE = SPI_Last_Edge;
+SPI_Running.D = 'b'0;
+
+PinNode = [MOSI7..0];
+[MOSI7..0].D = ['b'0, MOSI7..1];
+[MOSI7..0].CK = CLK;
+[MOSI7..0].CE = (SPI_Running & !SPI_Data_Load) & CNT0;
+[MOSI7..0].AR = !RST # (SPI_Data_Load & ![D7..0].io);
+[MOSI7..0].AP = (SPI_Data_Load & [D7..0].io);
+SPI_OUT = MOSI0;
+
+PinNode = [MISO7..0];
+[MISO7..0].D = [SPI_IN, MISO7..1];
+[MISO7..0].CK = CLK;
+[MISO7..0].CE = (SPI_Running & !SPI_Data_Load) & !CNT0;
+[MISO7..0].AR = !RST;
+
+/* **** SPI Control Register **** */
+
+PinNode = [SPI_Interrupt_Enable, SPI_Interrupt_Flag];
+
+SPI_Interrupt_Enable.L = D6.io;
+SPI_Interrupt_Enable.LE = SPI_Control_Load;
+SPI_Interrupt_Enable.AR = !RST;
+
+SPI_Interrupt_Flag.D = 'b'1;
+SPI_Interrupt_Flag.AR = !RST # (SPI_Control_Load & D7.io);
+SPI_Interrupt_Flag.CK = CLK;
+SPI_Interrupt_Flag.CE = SPI_Last_Edge;
+
+INT = 'b'0;
+INT.oe = SPI_Interrupt_Enable & SPI_Interrupt_Flag;
+
+/* **** Multiplexed Bus Data Read **** */
+
+[D6..7].oe = !RD & (SPI_Data_Register # SPI_Control_Register);
+[D0..5].oe = !RD & (Configure_Register # SPI_Data_Register # SPI_Control_Register);
+[D0..7] = (Configure_Register & [WA0..4, Offboard_Select, 'b'0, 'b'0])
+        # (SPI_Data_Register & [MISO0..7])
+        # (SPI_Control_Register & [CNT0..3, 'b'0, SPI_Running, SPI_Interrupt_Enable, SPI_Interrupt_Flag]);
