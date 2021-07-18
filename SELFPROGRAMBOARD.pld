@@ -75,27 +75,30 @@ PinNode = [WA0..4];
 PinNode = SPI_Running;
 PinNode = SPI_Last_Edge;
 PinNode = [SPI_Data_Load, SPI_Control_Load];
-PinNode = SPI_Slow;
+PinNode = [SPI_Prescaler0..1];
 
 SPI_Data_Load = !WR & SPI_Data_Register;
 SPI_Control_Load = !WR & SPI_Control_Register;
 
-SPI_Slow.L = D0.io;
-SPI_Slow.LE = SPI_Control_Load;
-SPI_Slow.AR = !RST;
+[SPI_Prescaler0..1].L = [D0..1].io;
+[SPI_Prescaler0..1].LE = SPI_Control_Load;
+[SPI_Prescaler0..1].AR = !RST;
 
 PinNode = [Prescaler0..5];
 [Prescaler0..5].CK = CLK;
-[Prescaler0..5].AR = !RST;
-Prescaler0.T = 'b'1;
-Prescaler1.T = Prescaler0;
-Prescaler2.T = [Prescaler0..1]:&;
-Prescaler3.T = [Prescaler0..2]:&;
-Prescaler4.T = [Prescaler0..3]:&;
-Prescaler5.T = [Prescaler0..4]:&;
+[Prescaler0..5].AR = !RST # [SPI_Prescaler1..0]:0;
+Prescaler0.T = SPI_Running & !SPI_Data_Load;
+Prescaler1.T = SPI_Running & !SPI_Data_Load & Prescaler0;
+Prescaler2.T = SPI_Running & !SPI_Data_Load & [Prescaler0..1]:&;
+Prescaler3.T = SPI_Running & !SPI_Data_Load & [Prescaler0..2]:&;
+Prescaler4.T = SPI_Running & !SPI_Data_Load & [Prescaler0..3]:&;
+Prescaler5.T = SPI_Running & !SPI_Data_Load & [Prescaler0..4]:&;
 
 PinNode = SPI_Count_Enable;
-SPI_Count_Enable = (SPI_Running & !SPI_Data_Load) & (!SPI_Slow # [Prescaler0..5]:&);
+SPI_Count_Enable = SPI_Running & !SPI_Data_Load & (([SPI_Prescaler1..0]:0)
+                 # ([SPI_Prescaler1..0]:1 & [Prescaler0..1]:&)
+                 # ([SPI_Prescaler1..0]:2 & [Prescaler0..3]:&)
+                 # ([SPI_Prescaler1..0]:3 & [Prescaler0..5]:&));
 
 PinNode = [CNT0..3];
 [CNT0..3].CK = CLK;
@@ -120,7 +123,7 @@ SPI_Running.D = 'b'0;
 PinNode = [MOSI7..0];
 [MOSI7..0].D = ['b'0, MOSI7..1];
 [MOSI7..0].CK = CLK;
-[MOSI7..0].CE = (SPI_Running & !SPI_Data_Load) & CNT0;
+[MOSI7..0].CE = SPI_Count_Enable & CNT0;
 [MOSI7..0].AR = !RST # (SPI_Data_Load & ![D7..0].io);
 [MOSI7..0].AP = (SPI_Data_Load & [D7..0].io);
 SPI_OUT = MOSI0;
@@ -128,7 +131,7 @@ SPI_OUT = MOSI0;
 PinNode = [MISO7..0];
 [MISO7..0].D = [SPI_IN, MISO7..1];
 [MISO7..0].CK = CLK;
-[MISO7..0].CE = (SPI_Running & !SPI_Data_Load) & !CNT0;
+[MISO7..0].CE = SPI_Count_Enable & !CNT0;
 [MISO7..0].AR = !RST;
 
 /* **** SPI Control Register **** */
@@ -157,4 +160,4 @@ SPI_INT.oe = SPI_Interrupt_Enable & SPI_Interrupt_Flag;
 [D0..5].oe = !RD & (Configure_Register # SPI_Data_Register # SPI_Control_Register);
 [D0..7] = (Configure_Register & [WA0..4, Offboard_Select, 'b'0, 'b'0])
         # (SPI_Data_Register & [MISO0..7])
-        # (SPI_Control_Register & [SPI_Slow, 'b'0, 'b'0, SPI_SS0..1, SPI_Running, SPI_Interrupt_Enable, SPI_Interrupt_Flag]);
+        # (SPI_Control_Register & [SPI_Prescaler0..1, 'b'0, SPI_SS0..1, SPI_Running, SPI_Interrupt_Enable, SPI_Interrupt_Flag]);
