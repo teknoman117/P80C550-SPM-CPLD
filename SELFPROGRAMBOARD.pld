@@ -48,8 +48,9 @@ SPI_Control_Register = Address:'b'100001XXXXXXXXX1;
 /* **** Configure Register **** */
 
 PinNode = [Offboard_Select, Delay2..0];
-Offboard_Select.L = D5.io;
-Offboard_Select.LE = !WR & Configure_Register;
+Offboard_Select.D = D5.io;
+Offboard_Select.CE = Configure_Register;
+Offboard_Select.CK = WR;
 Offboard_Select.AR = !RST;
 
 /* Give 3 code reads before switching to SPM memory */
@@ -60,8 +61,9 @@ Offboard_Select.AR = !RST;
 CODE_CS = Delay2;
 
 PinNode = [WA0..4];
-[WA0..4].L = [D0..4].io;
-[WA0..4].LE = !WR & Configure_Register;
+[WA0..4].D = [D0..4].io;
+[WA0..4].CE = Configure_Register;
+[WA0..4].CK = WR;
 [WA0..4].AR = !RST;
 
 /* **** SPM memory logic **** */
@@ -80,8 +82,9 @@ PinNode = [SPI_Prescaler0..1];
 SPI_Data_Load = !WR & SPI_Data_Register;
 SPI_Control_Load = !WR & SPI_Control_Register;
 
-[SPI_Prescaler0..1].L = [D0..1].io;
-[SPI_Prescaler0..1].LE = SPI_Control_Load;
+[SPI_Prescaler0..1].D = [D0..1].io;
+[SPI_Prescaler0..1].CE = SPI_Control_Register;
+[SPI_Prescaler0..1].CK = WR;
 [SPI_Prescaler0..1].AR = !RST;
 
 PinNode = [Prescaler0..5, CNT0..3];
@@ -139,8 +142,9 @@ PinNode = [MISO7..0];
 
 PinNode = [SPI_Interrupt_Enable, SPI_Interrupt_Flag];
 
-SPI_Interrupt_Enable.L = D6.io;
-SPI_Interrupt_Enable.LE = SPI_Control_Load;
+SPI_Interrupt_Enable.D = D6.io;
+SPI_Interrupt_Enable.CE = SPI_Control_Register;
+SPI_Interrupt_Enable.CK = WR;
 SPI_Interrupt_Enable.AR = !RST;
 
 SPI_Interrupt_Flag.D = 'b'1;
@@ -151,8 +155,9 @@ SPI_Interrupt_Flag.CE = SPI_Last_Edge;
 SPI_INT = 'b'0;
 SPI_INT.oe = SPI_Interrupt_Enable & SPI_Interrupt_Flag;
 
-[SPI_SS0..1].L = [D3..4].io;
-[SPI_SS0..1].LE = SPI_Control_Load;
+[SPI_SS0..1].D = [D2..3].io;
+[SPI_SS0..1].CE = SPI_Control_Register;
+[SPI_SS0..1].CK = WR;
 [SPI_SS0..1].AR = !RST;
 
 /* **** Multiplexed Bus Data Read **** */
@@ -161,4 +166,4 @@ SPI_INT.oe = SPI_Interrupt_Enable & SPI_Interrupt_Flag;
 [D0..5].oe = !RD & (Configure_Register # SPI_Data_Register # SPI_Control_Register);
 [D0..7] = (Configure_Register & [WA0..4, Offboard_Select, 'b'0, 'b'0])
         # (SPI_Data_Register & [MISO0..7])
-        # (SPI_Control_Register & [SPI_Prescaler0..1, 'b'0, SPI_SS0..1, SPI_Running, SPI_Interrupt_Enable, SPI_Interrupt_Flag]);
+        # (SPI_Control_Register & [SPI_Prescaler0..1, SPI_SS0..1, 'b'0, SPI_Running, SPI_Interrupt_Enable, SPI_Interrupt_Flag]);
