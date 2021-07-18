@@ -100,7 +100,7 @@ Prescaler4.T = [Prescaler0..3]:&;
 Prescaler5.T = [Prescaler0..4]:&;
 
 PinNode = SPI_Count_Enable;
-SPI_Count_Enable = [SPI_Prescaler1..0]:0
+SPI_Count_Enable = ([SPI_Prescaler1..0]:0 & (SPI_Running & !SPI_Data_Load))
                  # ([SPI_Prescaler1..0]:1 & [Prescaler0..1]:&)
                  # ([SPI_Prescaler1..0]:2 & [Prescaler0..3]:&)
                  # ([SPI_Prescaler1..0]:3 & [Prescaler0..5]:&);
