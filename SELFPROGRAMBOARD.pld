@@ -47,21 +47,17 @@ SPI_Control_Register = Address:'b'100001XXXXXXXXX1;
 
 /* **** Configure Register **** */
 
-PinNode = [Offboard_Select, Delay_Select, Delay2..0];
+PinNode = [Offboard_Select, Delay2..0];
 Offboard_Select.L = D5.io;
 Offboard_Select.LE = !WR & Configure_Register;
 Offboard_Select.AR = !RST;
 
-Delay_Select.L = D6.io;
-Delay_Select.LE = !WR & Configure_Register;
-Delay_Select.AR = !RST;
-
-/* Give 2 or 3 code reads before switching to SPM memory */
+/* Give 3 code reads before switching to SPM memory */
 [Delay2..0].D = [Delay1..0, Offboard_Select];
 [Delay2..0].CK = CODE_RD;
 [Delay2..0].AR = !RST;
 
-CODE_CS = (Delay2 & Delay_Select) # (Delay1 & !Delay_Select);
+CODE_CS = Delay2;
 
 PinNode = [WA0..4];
 [WA0..4].L = [D0..4].io;
@@ -79,21 +75,39 @@ PinNode = [WA0..4];
 PinNode = SPI_Running;
 PinNode = SPI_Last_Edge;
 PinNode = [SPI_Data_Load, SPI_Control_Load];
+PinNode = SPI_Slow;
 
 SPI_Data_Load = !WR & SPI_Data_Register;
 SPI_Control_Load = !WR & SPI_Control_Register;
+
+SPI_Slow.L = D0.io;
+SPI_Slow.LE = SPI_Control_Load;
+SPI_Slow.AR = !RST;
+
+PinNode = [Prescaler0..5];
+[Prescaler0..5].CK = CLK;
+[Prescaler0..5].AR = !RST;
+Prescaler0.T = 'b'1;
+Prescaler1.T = Prescaler0;
+Prescaler2.T = [Prescaler0..1]:&;
+Prescaler3.T = [Prescaler0..2]:&;
+Prescaler4.T = [Prescaler0..3]:&;
+Prescaler5.T = [Prescaler0..4]:&;
+
+PinNode = SPI_Count_Enable;
+SPI_Count_Enable = (SPI_Running & !SPI_Data_Load) & (!SPI_Slow # [Prescaler0..5]:&);
 
 PinNode = [CNT0..3];
 [CNT0..3].CK = CLK;
 [CNT0..3].AR = !RST;
 
-CNT0.T = (SPI_Running & !SPI_Data_Load);
-CNT1.T = (SPI_Running & !SPI_Data_Load) & CNT0;
-CNT2.T = (SPI_Running & !SPI_Data_Load) & [CNT0..1]:&;
-CNT3.T = (SPI_Running & !SPI_Data_Load) & [CNT0..2]:&;
+CNT0.T = SPI_Count_Enable;
+CNT1.T = SPI_Count_Enable & CNT0;
+CNT2.T = SPI_Count_Enable & [CNT0..1]:&;
+CNT3.T = SPI_Count_Enable & [CNT0..2]:&;
 
 SPI_CLK = CNT0;
-SPI_Last_Edge = (SPI_Running & !SPI_Data_Load) & [CNT0..3]:&;
+SPI_Last_Edge = SPI_Count_Enable & [CNT0..3]:&;
 
 /* **** SPI Data Register **** */
 
@@ -139,8 +153,8 @@ SPI_INT.oe = SPI_Interrupt_Enable & SPI_Interrupt_Flag;
 
 /* **** Multiplexed Bus Data Read **** */
 
-D7.oe = !RD & (SPI_Data_Register # SPI_Control_Register);
-[D0..6].oe = !RD & (Configure_Register # SPI_Data_Register # SPI_Control_Register);
-[D0..7] = (Configure_Register & [WA0..4, Offboard_Select, Delay_Select, 'b'0])
+[D6..7].oe = !RD & (SPI_Data_Register # SPI_Control_Register);
+[D0..5].oe = !RD & (Configure_Register # SPI_Data_Register # SPI_Control_Register);
+[D0..7] = (Configure_Register & [WA0..4, Offboard_Select, 'b'0, 'b'0])
         # (SPI_Data_Register & [MISO0..7])
-        # (SPI_Control_Register & ['b'0, 'b'0, 'b'0, SPI_SS0..1, SPI_Running, SPI_Interrupt_Enable, SPI_Interrupt_Flag]);
+        # (SPI_Control_Register & [SPI_Slow, 'b'0, 'b'0, SPI_SS0..1, SPI_Running, SPI_Interrupt_Enable, SPI_Interrupt_Flag]);
