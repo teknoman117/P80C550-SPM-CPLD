@@ -25,10 +25,11 @@ Pin [44, 43] = [RD, WR];
 Pin [17..21] = [MA0..4];
 Pin [24..25] = [MEM_RD, MEM_WR];
 
-Pin 28 = INT;
+Pin 28 = SPI_INT;
 Pin 29 = SPI_CLK;
 Pin 31 = SPI_OUT;
 Pin 32 = SPI_IN;
+Pin [33..34] = [SPI_SS0..1];
 
 /* **** Global Signals **** */
  
@@ -46,19 +47,21 @@ SPI_Control_Register = Address:'b'100001XXXXXXXXX1;
 
 /* **** Configure Register **** */
 
-PinNode = [Offboard_Select, Delay1];
+PinNode = [Offboard_Select, Delay_Select, Delay2..0];
 Offboard_Select.L = D5.io;
 Offboard_Select.LE = !WR & Configure_Register;
 Offboard_Select.AR = !RST;
 
-/* Give 2 code reads before switching to SPM memory */
-Delay1.D = Offboard_Select;
-Delay1.CK = CODE_RD;
-Delay1.AR = !RST;
+Delay_Select.L = D6.io;
+Delay_Select.LE = !WR & Configure_Register;
+Delay_Select.AR = !RST;
 
-CODE_CS.D = Delay1;
-CODE_CS.CK = CODE_RD;
-CODE_CS.AR = !RST;
+/* Give 2 or 3 code reads before switching to SPM memory */
+[Delay2..0].D = [Delay1..0, Offboard_Select];
+[Delay2..0].CK = CODE_RD;
+[Delay2..0].AR = !RST;
+
+CODE_CS = (Delay2 & Delay_Select) # (Delay1 & !Delay_Select);
 
 PinNode = [WA0..4];
 [WA0..4].L = [D0..4].io;
@@ -127,13 +130,17 @@ SPI_Interrupt_Flag.AR = !RST # (SPI_Control_Load & D7.io);
 SPI_Interrupt_Flag.CK = CLK;
 SPI_Interrupt_Flag.CE = SPI_Last_Edge;
 
-INT = 'b'0;
-INT.oe = SPI_Interrupt_Enable & SPI_Interrupt_Flag;
+SPI_INT = 'b'0;
+SPI_INT.oe = SPI_Interrupt_Enable & SPI_Interrupt_Flag;
+
+[SPI_SS0..1].L = [D3..4].io;
+[SPI_SS0..1].LE = SPI_Control_Load;
+[SPI_SS0..1].AR = !RST;
 
 /* **** Multiplexed Bus Data Read **** */
 
-[D6..7].oe = !RD & (SPI_Data_Register # SPI_Control_Register);
-[D0..5].oe = !RD & (Configure_Register # SPI_Data_Register # SPI_Control_Register);
-[D0..7] = (Configure_Register & [WA0..4, Offboard_Select, 'b'0, 'b'0])
+D7.oe = !RD & (SPI_Data_Register # SPI_Control_Register);
+[D0..6].oe = !RD & (Configure_Register # SPI_Data_Register # SPI_Control_Register);
+[D0..7] = (Configure_Register & [WA0..4, Offboard_Select, Delay_Select, 'b'0])
         # (SPI_Data_Register & [MISO0..7])
-        # (SPI_Control_Register & [CNT0..3, 'b'0, SPI_Running, SPI_Interrupt_Enable, SPI_Interrupt_Flag]);
+        # (SPI_Control_Register & ['b'0, 'b'0, 'b'0, SPI_SS0..1, SPI_Running, SPI_Interrupt_Enable, SPI_Interrupt_Flag]);
