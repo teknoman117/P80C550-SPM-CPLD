@@ -25,11 +25,11 @@ Pin [44, 43] = [RD, WR];
 Pin [17..21] = [MA0..4];
 Pin [24..25] = [MEM_RD, MEM_WR];
 
-Pin 28 = SPI_INT;
+Pin 33 = SPI_INT;
 Pin 29 = SPI_CLK;
 Pin 31 = SPI_OUT;
 Pin 32 = SPI_IN;
-Pin [33..34] = [SPI_SS0..1];
+Pin [26..28] = [SPI_SS0..2];
 
 /* **** Global Signals **** */
  
@@ -155,10 +155,15 @@ SPI_Interrupt_Flag.CE = SPI_Last_Edge;
 SPI_INT = 'b'0;
 SPI_INT.oe = SPI_Interrupt_Enable & SPI_Interrupt_Flag;
 
-[SPI_SS0..1].D = [D2..3].io;
-[SPI_SS0..1].CE = SPI_Control_Register;
-[SPI_SS0..1].CK = WR;
-[SPI_SS0..1].AR = !RST;
+PinNode = [SS0..1];
+[SS0..1].D = [D2..3].io;
+[SS0..1].CE = SPI_Control_Register;
+[SS0..1].CK = WR;
+[SS0..1].AR = !RST;
+
+!SPI_SS0 = [SS1..0]:1;
+!SPI_SS1 = [SS1..0]:2;
+!SPI_SS2 = [SS1..0]:3;
 
 /* **** Multiplexed Bus Data Read **** */
 
@@ -166,4 +171,4 @@ SPI_INT.oe = SPI_Interrupt_Enable & SPI_Interrupt_Flag;
 [D0..5].oe = !RD & (Configure_Register # SPI_Data_Register # SPI_Control_Register);
 [D0..7] = (Configure_Register & [WA0..4, Offboard_Select, 'b'0, 'b'0])
         # (SPI_Data_Register & [MISO0..7])
-        # (SPI_Control_Register & [SPI_Prescaler0..1, SPI_SS0..1, 'b'0, SPI_Running, SPI_Interrupt_Enable, SPI_Interrupt_Flag]);
+        # (SPI_Control_Register & [SPI_Prescaler0..1, SS0..1, 'b'0, SPI_Running, SPI_Interrupt_Enable, SPI_Interrupt_Flag]);
