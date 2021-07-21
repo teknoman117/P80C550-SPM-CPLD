@@ -17,12 +17,12 @@ PROPERTY ATMEL {pin_keep OFF} ; /* Disables pin-keeper circuits */
 
 Pin [4..9, 11, 12] = [D7..0];
 Pin [13..14] = [CODE_CS, CODE_RD];
-Pin [16, 36..41] = [A0, A10..15];
+Pin [34, 36..41] = [A0, A10..15];
 Pin [44, 43] = [RD, WR];
 
 /* **** Peripherals **** */
 
-Pin [17..21] = [MA0..4];
+Pin [16..21] = [MA0..5];
 Pin [24..25] = [MEM_RD, MEM_WR];
 
 Pin 33 = SPI_INT;
@@ -39,16 +39,17 @@ Pin 1 = RST;
 /* **** Address Decoding **** */
 
 Field Address = [A15..0];
-PinNode = [Configure_Register, SPI_Data_Register, SPI_Control_Register];
+PinNode = [Configure_Register, SPI_Data_Register, SPI_Control_Register, Memory_Window];
 
 Configure_Register = Address:'h'[8000..83FF];
 SPI_Data_Register = Address:'b'100001XXXXXXXXX0;
 SPI_Control_Register = Address:'b'100001XXXXXXXXX1;
+Memory_Window = Address:'h'[A000..BFFF];
 
 /* **** Configure Register **** */
 
 PinNode = [Offboard_Select, Delay2..0];
-Offboard_Select.D = D5.io;
+Offboard_Select.D = D6.io;
 Offboard_Select.CE = Configure_Register;
 Offboard_Select.CK = WR;
 Offboard_Select.AR = !RST;
@@ -60,18 +61,18 @@ Offboard_Select.AR = !RST;
 
 CODE_CS = Delay2;
 
-PinNode = [WA0..4];
-[WA0..4].D = [D0..4].io;
-[WA0..4].CE = Configure_Register;
-[WA0..4].CK = WR;
-[WA0..4].AR = !RST;
+PinNode = [WA0..5];
+[WA0..5].D = [D0..5].io;
+[WA0..5].CE = Configure_Register;
+[WA0..5].CK = WR;
+[WA0..5].AR = !RST;
 
 /* **** SPM memory logic **** */
 
-!MEM_RD = (A15 & A14 & !RD) # (CODE_CS & !CODE_RD);
-!MEM_WR = (A15 & A14 & !WR);
+!MEM_RD = (Memory_Window & !RD) # (CODE_CS & !CODE_RD);
+!MEM_WR = (Memory_Window & !WR);
 
-[MA0..4] = (!CODE_CS # CODE_RD) & [WA0..4];
+[MA0..5] = (!CODE_CS # CODE_RD) & [WA0..5];
 
 /* **** SPI counter register **** */
 PinNode = SPI_Running;
@@ -167,8 +168,8 @@ PinNode = [SS0..1];
 
 /* **** Multiplexed Bus Data Read **** */
 
-[D6..7].oe = !RD & (SPI_Data_Register # SPI_Control_Register);
-[D0..5].oe = !RD & (Configure_Register # SPI_Data_Register # SPI_Control_Register);
-[D0..7] = (Configure_Register & [WA0..4, Offboard_Select, 'b'0, 'b'0])
+D7.oe = !RD & (SPI_Data_Register # SPI_Control_Register);
+[D0..6].oe = !RD & (Configure_Register # SPI_Data_Register # SPI_Control_Register);
+[D0..7] = (Configure_Register & [WA0..5, Offboard_Select, 'b'0])
         # (SPI_Data_Register & [MISO0..7])
         # (SPI_Control_Register & [SPI_Prescaler0..1, SS0..1, 'b'0, SPI_Running, SPI_Interrupt_Enable, SPI_Interrupt_Flag]);
