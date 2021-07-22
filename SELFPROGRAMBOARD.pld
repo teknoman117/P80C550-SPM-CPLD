@@ -95,23 +95,23 @@ SPI_Control_Load = !WR & SPI_Control_Register;
 PinNode = [Prescaler0..5, CNT0..3];
 
 [Prescaler0..5].CK = CLK;
-[Prescaler0..5].AR = !RST # !SPI_Running # SPI_Data_Load;
+[Prescaler0..5].AR = !RST;
 
-Prescaler0.T = 'b'1;
-Prescaler1.T = Prescaler0;
-Prescaler2.T = [Prescaler0..1]:&;
-Prescaler3.T = [Prescaler0..2]:&;
-Prescaler4.T = [Prescaler0..3]:&;
-Prescaler5.T = [Prescaler0..4]:&;
+Prescaler0.T = [SPI_Prescaler1..0]:1 & (SPI_Running & !SPI_Data_Load);
+Prescaler1.T = [SPI_Prescaler1..0]:1 & (SPI_Running & !SPI_Data_Load) & Prescaler0;
+Prescaler2.T = [SPI_Prescaler1..0]:2 & (SPI_Running & !SPI_Data_Load) & [Prescaler0..1]:&;
+Prescaler3.T = [SPI_Prescaler1..0]:2 & (SPI_Running & !SPI_Data_Load) & [Prescaler0..2]:&;
+Prescaler4.T = [SPI_Prescaler1..0]:3 & (SPI_Running & !SPI_Data_Load) & [Prescaler0..3]:&;
+Prescaler5.T = [SPI_Prescaler1..0]:3 & (SPI_Running & !SPI_Data_Load) & [Prescaler0..4]:&;
 
 PinNode = SPI_Count_Enable;
 SPI_Count_Enable = ([SPI_Prescaler1..0]:0 & (SPI_Running & !SPI_Data_Load))
-                 # ([SPI_Prescaler1..0]:1 & [Prescaler0..1]:&)
-                 # ([SPI_Prescaler1..0]:2 & [Prescaler0..3]:&)
-                 # ([SPI_Prescaler1..0]:3 & [Prescaler0..5]:&);
+                 # ([SPI_Prescaler1..0]:1 & (SPI_Running & !SPI_Data_Load) & [Prescaler0..1]:&)
+                 # ([SPI_Prescaler1..0]:2 & (SPI_Running & !SPI_Data_Load) & [Prescaler0..3]:&)
+                 # ([SPI_Prescaler1..0]:3 & (SPI_Running & !SPI_Data_Load) & [Prescaler0..5]:&);
 
 [CNT0..3].CK = CLK;
-[CNT0..3].AR = !RST # !SPI_Running # SPI_Data_Load;
+[CNT0..3].AR = !RST;
 
 CNT0.T = SPI_Count_Enable;
 CNT1.T = SPI_Count_Enable & CNT0;
