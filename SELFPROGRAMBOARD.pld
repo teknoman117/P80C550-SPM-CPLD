@@ -12,7 +12,7 @@ Assembly  None ;
 Location  Willits ;
 Device   f1504plcc44 ;
 
-PROPERTY ATEML {JTAG=OFF};
+PROPERTY ATMEL {JTAG=OFF};
 PROPERTY ATMEL {preassign keep};
 PROPERTY ATMEL {security on};
 PROPERTY ATMEL {pin_keep OFF} ; /* Disables pin-keeper circuits */
