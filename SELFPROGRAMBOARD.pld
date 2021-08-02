@@ -127,15 +127,15 @@ SPI_Last_Edge = SPI_Count_Enable & [CNT0..3]:&;
 /* **** SPI Data Register **** */
 
 PinNode = [MOSI7..0];
-[MOSI7..0].D = ['b'0, MOSI7..1];
+[MOSI7..0].D = [MOSI6..0, 'b'0];
 [MOSI7..0].CK = CLK;
 [MOSI7..0].CE = SPI_Count_Enable & CNT0;
 [MOSI7..0].AR = !RST # (SPI_Data_Load & ![D7..0].io);
 [MOSI7..0].AP = (SPI_Data_Load & [D7..0].io);
-SPI_OUT = MOSI0;
+SPI_OUT = MOSI7;
 
 PinNode = [MISO7..0];
-[MISO7..0].D = [SPI_IN, MISO7..1];
+[MISO7..0].D = [MISO6..0, SPI_IN];
 [MISO7..0].CK = CLK;
 [MISO7..0].CE = SPI_Count_Enable & !CNT0;
 [MISO7..0].AR = !RST;
