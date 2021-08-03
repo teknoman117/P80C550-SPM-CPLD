@@ -1,4 +1,4 @@
-# Self Programming Module
+# Self Programming Module (HDL for CPLD)
 
 The P80C550-SPM is an expansion board for the P80C550-EVN which provides self programming capability by providing an alternate memory device which can be swapped to at runtime. A bootloader will be installed on the onboard ROM of the P80C550-EVN which will offer the ability to program this alternate memory device. It also provides an SPI controller hard configured for MSB first transmission in mode 0 to interface with an SD/MMC card.
 
@@ -14,7 +14,7 @@ The P80C550-SPM is an expansion board for the P80C550-EVN which provides self pr
 
 ## Self Programming
 
-The self programming control register is overlain on the Power Status Register on the base board, as only bit 7 is defined (the other bits are high-Z). This allows the use of these 7 bits in expansion boards. A total of 19 address bits (512 KiB) are provided for the SPM memory device. When accessed as code memory, A18 -> A16 are set to 0 and A15 -> A13 are forwarded from the address bus. The CPLD has no electrical connection to A12 -> A0 of the memory device. When accessed as xdata memory via an 8 KiB window at A000h, A19 -> A13 are set to the "SPM Memory Page" bits from the control register. 
+The self programming control register overlays the Power Status Register on the base board, as only bit 7 is defined (the other bits are high-Z). This allows the use of these 7 bits in expansion boards. A total of 19 address bits (512 KiB) are provided for the SPM memory device. When accessed as code memory, A18 -> A16 are set to 0 and A15 -> A13 are forwarded from the address bus. The CPLD has no electrical connection to A12 -> A0 of the memory device. When accessed as xdata memory via an 8 KiB window at A000h, A19 -> A13 are set to the "SPM Memory Page" bits from the control register. 
 
 During development an SST39SF040 was used as the reference memory device. Along with the SST39SF010 (128 KiB) and SST39SF020 (256 KiB), it is one of the few parallel flash memories still in production at a reasonable price ($2 USD). It also has a page size of 4 KiB is awesome, as most comparable flash memories of the era (e.g. AM29F040) had 64 KiB pages. Another option is to use a RAM for the SPM memory device, the tradeoff being that the ROM has to load an image to execute from somewhere (such as an SD/MMC card).
 
