@@ -117,6 +117,8 @@ At present, the minimal bootloader is a very simple program that waits for 1 sec
 - 'B' is received: boot to flash device
 - any other byte is received: print 'N'
 
+[https://github.com/teknoman117/P80C550-SPM-Bootloader-Minimal](https://github.com/teknoman117/P80C550-SPM-Bootloader-Minimal)
+
 ### SD Card Benchmark
 
 Using the SDCC 8051 toolchain and a highly unoptimized access routine, I was able to achieve a raw read speed of 24.5 KiB/s
