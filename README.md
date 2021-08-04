@@ -60,7 +60,7 @@ Bits 5 -> 0 ("SPM Memory Page") controls address bits A18 -> A13 of the memory d
 | 3:2 | ~SS Enable           |
 | 1:0 | SCK Prescaler Select |
 
-- The SPI Interrupt Flag is set after a SPI transfer has completed. It must be cleared before another transfer can take place by writing a 1 to the bit.
+- The SPI Interrupt Flag is set after a SPI transfer has completed. It is cleared by writing 1 to the bit, or by reading or writing to the data register.
 - The SPI Interrupt Enable bit controls whether the EX0 interrupt on the CPU is triggered when a transfer completes.
 - The SPI Running / Busy Flag reads as 1 when a SPI transfer is currently in progress.
 - The ~SS Select bits controls which ~SS line is currently active.
@@ -98,9 +98,6 @@ spi_transfer_wait:
     MOVX A, @DPTR
     RLC
     JNC  spi_transfer_wait
-    RRC
-    ; clear flag (write contents of control register to control register)
-    MOVX @DPTR, A
     ; read data register and return
     DEC  DPL
     MOVX A, @DPTR
@@ -124,3 +121,50 @@ At present, the minimal bootloader is a very simple program that waits for 1 sec
 Using the SDCC 8051 toolchain and a highly unoptimized access routine, I was able to achieve a raw read speed of 24.5 KiB/s
 
 ![Benchmark](/Assets/sdcard-1.png)
+
+## Flashing CPLD without an expensive programmer
+
+### Converting .JED to .SVF
+
+<img src="/Assets/atmispv7.png" width="500" />
+
+You can use the ATMISPv7 tool from Microchip to convert .JED files from the WinCupl into .SVF files you can use with OpenOCD and any generic JTAG programmer.
+
+### Flashing .SVF to CPLD
+
+<img src="/Assets/breadboard-2.webp" width="500" />
+
+I use a cheap FT232H board to program these CPLDs. Connect the pins as follows:
+
+| FTDI Pin | CPLD Pin |
+| -------- | -------- |
+| AD0      | TCK (32) |
+| AD1      | TDI (7)  |
+| AD2      | TDO (38) |
+| AD3      | TMS (13) |
+
+To erase the CPLD, connect +12V to OE1 (44) through a current limiting resistor (I use 4k7 ohms) and run the following:
+
+```
+openocd -f /usr/share/openocd/scripts/interface/ftdi/um232h.cfg \
+        -c "adapter speed 400" \
+        -c "transport select jtag" \
+        -c "jtag newtap ATF1504AS tap -irlen 3 -expected-id 0x0150403f" \
+        -c init \
+        -c "svf atf1504as-erase.svf" \
+        -c "sleep 200" \
+        -c shutdown
+```
+
+To program the CPLD, remove the 12V connection and run the following:
+
+```
+openocd -f /usr/share/openocd/scripts/interface/ftdi/um232h.cfg \
+        -c "adapter speed 400" \
+        -c "transport select jtag" \
+        -c "jtag newtap ATF1504AS tap -irlen 3 -expected-id 0x0150403f" \
+        -c init \
+        -c "svf SELFPROGRAMBOARD.svf" \
+        -c "sleep 200" \
+        -c shutdown
+```
