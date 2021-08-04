@@ -162,7 +162,10 @@ SPI_Interrupt_Enable.AR = !RST;
 SPI_Interrupt_Flag.D = 'b'1;
 SPI_Interrupt_Flag.CE = SPI_Last_Edge;
 SPI_Interrupt_Flag.CK = CLK;
-SPI_Interrupt_Flag.AR = !RST # (SPI_Control_Load & D7.io) # (SPI_Data_Register & RD_rising);
+SPI_Interrupt_Flag.AR = (SPI_Control_Load & D7.io)
+                      # (SPI_Data_Register & RD_rising)
+                      # (SPI_Data_Load)
+                      # !RST;
 
 SPI_INT = 'b'0;
 SPI_INT.oe = SPI_Interrupt_Enable & SPI_Interrupt_Flag;
