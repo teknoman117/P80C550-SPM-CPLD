@@ -40,6 +40,15 @@ Pin [26..28] = [SPI_SS0..2];
 Pin 2 = CLK;
 Pin 1 = RST;
 
+/* **** ~RD edge detector **** */
+
+PinNode = [RD_edge, RD_rising];
+
+RD_edge.D = RD;
+RD_edge.CK = CLK;
+RD_edge.AR = !RST;
+RD_rising = RD & !RD_edge;
+
 /* **** Address Decoding **** */
 
 Field Address = [A15..0];
@@ -81,10 +90,11 @@ PinNode = [WA0..5];
 /* **** SPI counter register **** */
 PinNode = SPI_Running;
 PinNode = SPI_Last_Edge;
-PinNode = [SPI_Data_Load, SPI_Control_Load];
+PinNode = [SPI_Data_Load, SPI_Control_Load, SPI_Data_Read];
 PinNode = [SPI_Prescaler0..1];
 
 SPI_Data_Load = !WR & SPI_Data_Register;
+SPI_Data_Read = !RD & SPI_Data_Register;
 SPI_Control_Load = !WR & SPI_Control_Register;
 
 [SPI_Prescaler0..1].D = [D0..1].io;
@@ -152,7 +162,7 @@ SPI_Interrupt_Enable.AR = !RST;
 SPI_Interrupt_Flag.D = 'b'1;
 SPI_Interrupt_Flag.CE = SPI_Last_Edge;
 SPI_Interrupt_Flag.CK = CLK;
-SPI_Interrupt_Flag.AR = !RST # (SPI_Control_Load & D7.io);
+SPI_Interrupt_Flag.AR = !RST # (SPI_Control_Load & D7.io) # (SPI_Data_Register & RD_rising);
 
 SPI_INT = 'b'0;
 SPI_INT.oe = SPI_Interrupt_Enable & SPI_Interrupt_Flag;
