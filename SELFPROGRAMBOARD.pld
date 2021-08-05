@@ -85,7 +85,8 @@ PinNode = [WA0..5];
 !MEM_RD = (Memory_Window & !RD) # (CODE_CS & !CODE_RD);
 !MEM_WR = (Memory_Window & !WR);
 
-[MA0..5] = (!CODE_CS # CODE_RD) & [WA0..5];
+[MA0..5] = ((!CODE_CS # CODE_RD) & [WA0..5])
+         # ((CODE_CS & !CODE_RD) & [A13..15, 'b'0, 'b'0, 'b'0]);
 
 /* **** SPI counter register **** */
 PinNode = SPI_Running;
